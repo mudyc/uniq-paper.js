@@ -84,7 +84,7 @@ class NamedTexture:
                 'minfilter': self.minfilter,
             }, outfile)
 
-        with open(self.name+'.js', 'w') as outfile:
+        with open('js/'+self.name+'.js', 'w') as outfile:
             outfile.write('var TEX_DATA = TEX_DATA || [];\n')
             outfile.write('TEX_DATA.push(\n')
             json.dump({

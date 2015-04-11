@@ -1,0 +1,71 @@
+/*
+waves.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <math.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+float identf(float x) { return x; }
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    FPARAM(scale, 1);
+    FPARAM(bias, 0);
+    FPARAM(freq0, 1)
+    FPARAM(freq1, 1)
+    FPARAM(freq2, 1)
+    FPARAM(freq3, 1)
+    FPARAM(abs, 0)
+
+    if(components < 0 || components > 4) return;
+    if(depth != 1) return;
+
+    float c0 = 2*M_PI*freq0;
+    float c1 = 2*M_PI*freq1;
+    float c2 = 2*M_PI*freq2;
+    float c3 = 2*M_PI*freq3;
+
+    float (*func)(float) = abs ? fabsf : identf;
+
+    int ind=0, i, j;
+    for (j = 0; j < height; j++) {
+      for (i = 0; i < width; i++) {
+
+	// 0..1
+	float x = (float)i/width;
+	float y = (float)j/height;
+
+	if (components >= 1) data[ind++] = scale * func(sin(c0*x)) + bias;
+	if (components >= 2) data[ind++] = scale * func(sin(c1*y)) + bias;
+	if (components >= 3) data[ind++] = scale * func(sin(c2*(x+y))) + bias;
+	if (components >= 4) data[ind++] = scale * func(sin(c3*(x-y))) + bias;
+      }
+    }
+}
+
+// vim: set syntax=c:

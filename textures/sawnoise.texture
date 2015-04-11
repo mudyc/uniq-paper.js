@@ -1,0 +1,131 @@
+/*
+sawnoise.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+/** 
+ * This is just the fnoise.texture with sin and cos replaceby a saw wave
+ */
+
+#include <stdlib.h>
+#include <math.h>
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+static double drand() {
+    return random() / (double)RAND_MAX;
+}
+
+float saw_sin(float x) {
+  float t = asin(sin(x))/M_PI_2;
+  return t*t*t;
+}
+float saw_cos(float x) {
+  return saw_sin(x + M_PI_2);
+}
+
+
+/* Add a fourier noise to the data.
+ */
+static void fourier_noise(int width, int height, int depth, int components, float *data, 
+			  float freq, float df, float amp, float freq2, float df2, float amp2) {
+    int nf = (int)(2 * ((freq > freq2) ? freq : freq2));
+    float xsin[4][nf][width];
+    for(int i=0; i<width; i++) 
+	for(int f = 0; f < nf; f++) {
+	    xsin[0][f][i] = sin(i/(float)width * f * M_PI * 2);
+	    xsin[1][f][i] = cos(i/(float)width * f * M_PI * 2);
+	    xsin[2][f][i] = saw_sin(i/(float)width * f * M_PI * 2);
+	    xsin[3][f][i] = saw_cos(i/(float)width * f * M_PI * 2);
+	}
+    float ysin[4][nf][height];
+    for(int j=0; j<width; j++) 
+	for(int f = 0; f < nf; f++) {
+	    ysin[0][f][j] = sin(j/(float)height * f * M_PI * 2);
+	    ysin[1][f][j] = cos(j/(float)height * f * M_PI * 2);
+	    ysin[2][f][j] = saw_sin(j/(float)height * f * M_PI * 2);
+	    ysin[3][f][j] = saw_cos(j/(float)height * f * M_PI * 2);
+	}
+    
+    
+    if(depth < 2) {
+	// 2D
+	for(int xf = 0; xf < nf; xf++) {
+	  for(int yf = 0; yf < nf; yf++) {
+
+	    double f = sqrt(xf*xf + yf*yf);
+	    int b;
+	    float a;
+	    for (b = 0; b < 4; b += 2) {
+	      if (b == 0 && fabs(f - freq) < df) a = amp; // Sine noise
+	      else if (b == 2 && fabs(f - freq2) < df2) a = amp2; // Saw noise
+	      else continue;
+
+	      for(int xsc = 0; xsc < 2; xsc++) {
+		for(int ysc = 0; ysc < 2; ysc++) {
+		  float coeff[components];
+		  for(int co = 0; co < components; co++)
+		    coeff[co] = a * (drand()-0.5);
+		  int ind = 0;
+		  for (int j = 0; j < height; j++) {
+		    for (int i = 0; i < width; i++) {
+		      for(int co = 0; co < components; co++)
+			data[ind++] += xsin[xsc+b][xf][i] * ysin[ysc+b][yf][j] * coeff[co];
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+    } else {
+	// 3D
+    }
+}
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    FPARAM(bias, 0);
+
+    FPARAM(freq, 5);
+    FPARAM(df, 2);
+    FPARAM(scale, 1);
+
+    FPARAM(freq2, 5);
+    FPARAM(df2, 0);
+    FPARAM(scale2, 1);
+
+    int d = (depth==0 ? 1 : depth);
+
+    for(int i = 0; i<width*height*d*components; i++)
+	data[i] = 0;
+
+    fourier_noise(width,height,d,components,data, freq, df, scale, freq2, df2, scale2);
+    for(int i = 0; i<width*height*d*components; i++) {
+	data[i] += bias;
+    }
+}
+
+// vim: set syntax=c :

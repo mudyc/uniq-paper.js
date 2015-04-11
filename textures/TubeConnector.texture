@@ -1,0 +1,97 @@
+/*
+TubeConnector.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+
+#include <math.h>
+#include <string.h>
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+
+  float xstep = 6.0 / width;
+  float ystep = 10.0 / height;
+  float x, y;
+  int ind = 0, i, j;
+
+  enum { AMBIENT = 0, DIFFUSE, SPECULAR, SHADOW };
+  int type = params->getStringEnum("light",  0, "ambient", "diffuse", "specular", "shadow", 0);
+  int power = (int)params->getFloat("power", 8);
+
+  for (j = 0, y = -5; j < height; j++, y += ystep) {
+    for (i = 0, x = -5; i < width; i++, x += xstep) {
+      float r = x < 0 ? 1 : 5 - 4 * sqrt(1 - x*x);
+      float h = x < 0 ? 1 : 1 - x * x;
+      float d = fabs(y);
+
+      float f = sqrt(1 - y * y / (r * r)) * h;
+      float r_x = x < 0 ? 0 : -4 * x / sqrt(1 - x*x);
+      float h_x = x < 0 ? 0 : -2 * x;
+
+      float dx, dy;
+      dx = .5 * 1 / sqrt(1 - y * y / (r * r)) * -2 / (r * r * r) * r_x * h
+	+ sqrt(1 - y * y / (r * r)) * h_x;
+      dy = .5 * 1 / sqrt(1 - y * y / (r * r)) * 2 * y * h;
+
+      d = (d - r) / ystep;
+      float alpha = d > .5 ? 0 : d > -.5 ? .5 - d : 1;
+      float dot;
+
+      if (type == SHADOW) {
+	float d = fabs(y) - r;
+	alpha = .7 * (d < -.5 ? 1 : 1 - (d + .5) * (d + .5) * (d + .5) * (d + .5) * 16);
+	dot = 0;
+      }
+
+      alpha *= h;
+
+      if (type == AMBIENT) {
+	dot = 1;
+      }
+      else dot = f > 0 ? 1 / sqrt(dx * dx + dy * dy + 1) : 0;
+
+      if (type == SPECULAR) {
+	for (int p = power; p >>= 1; )
+	  dot *= dot;
+      }
+
+      switch (components) {
+      case 1:
+	data[ind] = dot;
+	if (type == 3) data[ind] = alpha;
+	break;
+      case 2:
+	data[ind] = dot;
+	data[ind + 1] = alpha;
+	break;
+      }
+
+      ind += components;
+    }
+  }
+
+}

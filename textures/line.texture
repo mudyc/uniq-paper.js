@@ -1,0 +1,68 @@
+// -*-C++-*-
+/*
+line.texture
+ *    
+ *    Copyright (c) 2003, Matti Katila and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Matti Katila and Tuomas J. Lukka
+ */
+
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+  if(components != 1) return;
+  
+  /* makes 2(1)D-texture:
+   *  _________________________
+   *  |__|__|__|xx|xx|__|__|__|
+   * 
+   *  -where x are black pixels
+   */
+  for (int h=0; h<height; h++) {
+    int index = h*width;
+
+    // make data clean.
+    for (int i=0; i<width; i++) {
+      data[index + i] = 0;
+    } 
+
+    int steps = width / 8;
+    int low   = steps * 3;
+    int high  = steps * 4;
+
+    if ( width > 4) {
+      for (int i=low; i<high; i++) {
+	data[index + i] = 1;
+      }
+    } else {
+      switch(width) {
+      case 4:
+	data[index + 1] = 0.5;
+	data[index + 2] = 0.5; break;
+      case 2:
+	data[index + 0] = 0.25;
+	data[index + 1] = 0.25; break;
+      case 1: data[index + 0] = 0.25; break;
+      }
+    }
+  }
+}

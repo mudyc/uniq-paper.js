@@ -1,0 +1,131 @@
+/*
+shape2.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+
+#include <math.h>
+
+static float noise3b(float par[]) {
+  static const float a = .5;
+  static const float c = cos(a), s = sin(a);
+  static const float m = 1/sqrt(2);
+
+  float par2[3] = { c * par[0] - s * par[1] - 37,
+		    s * par[0] + c * par[1] - 51,
+		    par[2] + 39.7 };
+
+  return m * (Perlin::noise3(par) + Perlin::noise3(par2));
+  
+}
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+float tanh2(float x) { return (exp(x)-exp(-x))/(exp(x)+exp(-x)); }
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+
+    FPARAM(bulgefreq, 5)
+    FPARAM(bulgemagx, 0)
+    FPARAM(bulgemagy, 0)
+    FPARAM(bulgemagz, 5)
+
+    FPARAM(lfreq, 21)
+    FPARAM(hfreq, 69)
+
+    FPARAM(scale, 0.9)
+
+    float par0[3];
+    float par1[3];
+    float par2[3];
+    
+    float par10[3];
+    float par11[3];
+    float par12[3];
+
+    float parlf0[3];
+    float parhf0[3];
+    float parlf1[3];
+    float parhf1[3];
+    float parlf2[3];
+    float parhf2[3];
+
+    if(components != 3) return;
+
+    int ind=0, i, j;
+    for (j = 0; j < height; j++) {
+      for (i = 0; i < width; i++) {
+
+	float y = ((float)i)/(height-1)*2-1;
+	float x = ((float)j)/(height-1)*2-1;
+
+	// Very slow parameters
+	par0[0] = 6*x; par0[1] = 6*y; par0[2] = 0;
+	par1[0] = 6*x; par1[1] = 6*y; par1[2] = 80;
+	par2[0] = 6*x; par2[1] = 6*y; par2[2] = 160;
+
+	double n0 = .5+.5*tanh2(5*Perlin::noise3(par0)-1);
+	double n1 = .5+.5*tanh2(5*Perlin::noise3(par1)-1);
+	double n2 = .5+.5*tanh2(5*Perlin::noise3(par2)-1);
+
+	// The bulging
+	par10[0] = bulgefreq*x; par10[1] = bulgefreq*y; par10[2] = 40.3;
+	par11[0] = bulgefreq*x; par11[1] = bulgefreq*y; par11[2] = 120.7;
+	par12[0] = bulgefreq*x; par12[1] = bulgefreq*y; par12[2] = 200.7;
+
+	double m0 = Perlin::noise3(par10);
+	double m1 = Perlin::noise3(par11);
+	double m2 = Perlin::noise3(par12);
+
+	x += bulgemagx * m0;
+	y += bulgemagy * m1;
+	float z = bulgemagz * m2;
+
+	// Low freq and high freq parameters
+	parlf0[0] =  lfreq * x;         parlf0[1] =  lfreq * y;         parlf0[2] = lfreq*z + 50 ;
+	parhf0[0] = hfreq * x +  37.3; parhf0[1] = hfreq * y + 275.8; parhf0[2] = hfreq*z + 50 + 128 ;
+	parlf1[0] =  lfreq * x +  69.2; parlf1[1] =  lfreq * y + 231.0; parlf1[2] = lfreq*z + 50 + 0 + 80 ;
+	parhf1[0] = hfreq * x + 111.7; parhf1[1] = hfreq * y + 200.3; parhf1[2] = hfreq*z + 50 + 128 + 80 ;
+	parlf2[0] =  lfreq * x + 167.6; parlf2[1] =  lfreq * y + 145.9; parlf2[2] = lfreq*z + 50 + 0 + 160 ;
+	parhf2[0] = hfreq * x + 213.1; parhf2[1] = hfreq * y +  27.6; parhf2[2] = hfreq*z + 50 + 128 + 160 ;
+
+	double lf0 = scale*noise3b(parlf0);
+	double hf0 = scale*noise3b(parhf0);
+	double lf1 = scale*noise3b(parlf1);
+	double hf1 = scale*noise3b(parhf1);
+	double lf2 = scale*noise3b(parlf2);
+	double hf2 = scale*noise3b(parhf2);
+
+	data[ind++] = 0.5 + n0 * hf0 + lf0 ;
+	data[ind++] = 0.5 + n1 * hf1 + lf1 ;
+	data[ind++] = 0.5 + n2 * hf2 + lf2 ;
+      }
+    }
+    
+}
+
+// vim: set syntax=c :

@@ -1,0 +1,149 @@
+/*
+rd1.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    FPARAM(scale, 1);
+    FPARAM(bias, 0);
+    FPARAM(iter, 100);
+    FPARAM(Du, 2E-5);
+    FPARAM(Dv, 1E-5);
+    FPARAM(F, 0.04);
+    FPARAM(k, 0.065);
+    FPARAM(eps, 1E-2);
+    //FPARAM(teps, 1);
+     
+    //#define float double
+
+    if(components < 0 || components > 4) return;
+    if(depth != 1) return;
+
+
+    int n = (width+2) * (height+2);
+    int line = width+2;
+
+    float *__restrict__ U= new float[n];
+    float *__restrict__ V = new float[n];
+    float *__restrict__ U2 = new float[n]; 
+    float *__restrict__ V2 = new float[n];
+
+    // Initialize arrays
+    for (int i = 0; i < n; i++) {
+      float x = (float)(i % line) / width * 2 * M_PI;
+      float y = (float)(i / line) / height * 2 * M_PI;
+
+      U[i] = sin(x + y);
+      V[i] = sin(2*y);
+    }
+
+    Du /= eps * eps;
+    Dv /= eps * eps;
+
+    float F_plus_k = F + k;
+    for (int c = 0; c < iter; c++) {
+
+      // Copy borders for proper tiling
+      float *a = U;
+      while (1) {
+	for (int i = 0; i < line; i++) {
+	  a[i] = a[i + height * line];
+	  a[i + height * line + line] = a[i + line];
+	}
+	for (int i = 0; i < height+2; i++) {
+	  a[i * line] = a[width + i * line];
+	  a[width + i * line + 1] = a[i * line + 1];
+	}
+	if (a == V) break;
+	a = V;
+      }
+
+#if 1
+#define laplacian(a) (a[i-line]+a[i-1]+a[i+1]+a[i+line]-4*a[i])
+#else
+#define laplacian(a) 1./3*(a[i-line-1]+a[i-line]+a[i-line+1]+ \
+			   a[i-1]   -8*a[i]     +a[i+1]+ \
+			   a[i+line-1]+a[i+line]+a[i+line+1])
+#endif
+
+      for (int i = line; i < n-line; i++) {
+	U2[i] = U[i] + /*teps */ (Du * laplacian(U) - U[i] * V[i] * V[i] + F * (1 - U[i]));
+	V2[i] = V[i] + /*teps */ (Dv * laplacian(V) + U[i] * V[i] * V[i] - (F_plus_k) * V[i]);
+      }
+	
+      if (c%200 == 0) {
+	fprintf(stderr, "Iteration %d: ", c);
+	fflush(stderr);
+
+	int num=0;
+	float umin=1E30, umax=-1E30, usum=0;
+	float vmin=1E30, vmax=-1E30, vsum=0;
+	for (int i = line; i < n-line; i++) {
+	  if (!finite(U2[i]) || !finite(V2[i])) {
+	    fprintf(stderr, "Not finite %d\n", i);
+	    abort();
+	  }
+
+	  num++;
+	  if (U2[i] < umin) umin = U2[i];
+	  if (U2[i] > umax) umax = U2[i];
+	  usum += U2[i];
+	  
+	  if (V2[i] < vmin) vmin = V2[i];
+	  if (V2[i] > vmax) vmax = V2[i];
+	  vsum += V2[i];
+	}
+	fprintf(stderr, "\tu: %G %G %G\tv: %G %G %G\n", 
+		umin, usum/num, umax,
+		vmin, vsum/num, vmax);
+      }
+      
+      // Swap U <-> U2 and V <-> V2
+      float *t;
+      t = U; U = U2; U2 = t;
+      t = V; V = V2; V2 = t;
+    }
+
+    
+    int ind = 0;
+    for (int j = 1; j <= height; j++)
+      for (int i = 1; i <= width; i++)
+	{
+	  if (components >= 1) data[ind++] = scale * U[j * line + i] + bias;
+	  if (components >= 2) data[ind++] = scale * V[j * line + i] + bias;
+	  if (components >= 3) data[ind++] = scale * U[j * line + i] + bias;
+	  if (components >= 4) data[ind++] = scale * V[j * line + i] + bias;
+	}
+}
+
+// vim: set syntax=c:

@@ -1,0 +1,219 @@
+/*
+noise.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <math.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+#define SFPARAM(name, default) name = params->getFloat(#name, default);
+
+typedef float (*FUNC)(float *p);
+
+float f_noise(float *p) {
+    return Perlin::noise3(p);
+}
+
+static float turbfreq = 1; // !! nasty global
+float f_turb(float *p) {
+    return Perlin::turbulence(p, turbfreq);
+}
+
+static float fbmoct = 1;
+static float fbmlacu = 1;
+static float fbmgain = 1;
+float f_fBm(float *p) {
+    return Perlin::fBm(p, (int)fbmoct, fbmlacu, fbmgain);
+}
+float f_faBm(float *p) {
+    return Perlin::faBm(p, (int)fbmoct, fbmlacu, fbmgain);
+}
+
+/** Calculate and add a single cube of data to given array.
+ */
+static void cube(FUNC f, float scale, TextureParam *params, int width, int height, int depth, int components, float *data) {
+
+    FPARAM(freq, 5);
+
+    int ind=0, i, j, k;
+    for (k = 0; k < depth; k++) {
+    for (j = 0; j < height; j++) {
+      for (i = 0; i < width; i++) {
+
+	// 0..1
+	float par[3] = {
+	 freq * ((float)i)/(width-1)+.3,
+	 freq * ((float)j)/(height-1)+.3,
+	 freq * (depth==1?0:((float)k)/(depth-1))+.3
+	 };
+
+	
+	for(int c = 0; c < components; c++) {
+	    data[ind+c] += f(par) * scale;
+	    par[2] += 21.419;
+	}
+	ind += components;
+      }
+    }
+    }
+
+}
+
+inline float mix(float t, float a, float b) {
+  //return t*a + (1-t)*b;
+
+  //float x = sin(t*M_PI_2) * sin(t*M_PI_2);
+  float x = t * t * (3 - 2 * t);
+  float y = 1 - x;
+
+  return (x * a + y * b) / sqrt(x * x + y * y);
+}
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+	int tilewidth = (int)(width * .5);
+	int tileheight = (int)(height * .5);
+	int tiledepth = (int)(depth * .5);
+
+	FPARAM(bias, 0);
+    FPARAM(scale, 1);
+
+	SFPARAM(turbfreq, 100);
+	SFPARAM(fbmoct, 5);
+	SFPARAM(fbmlacu, 1.94);
+	SFPARAM(fbmgain, 0.5);
+
+	float *data0 = new float[(width + tilewidth) * 
+				(height + tileheight) * 
+				(depth + tiledepth) * components];
+
+	FUNC f;
+	switch(params->getStringEnum("type", 0, 
+		    "normal",
+		    "turbulence",
+		    "fBm",
+		    "faBm", 
+				     0)) {
+	case 1:
+	    f = f_turb;
+	    break;
+	case 2:
+	    f = f_fBm;
+	    break;
+	case 3:
+	    f = f_faBm;
+	    break;
+	default:
+	case 0:
+	    f = f_noise;
+	    break;
+	}
+
+	cube(f, scale, params, width + tilewidth, height + tileheight, 
+		depth + tiledepth, components, data0);
+
+
+#define D0(x, y, z, c) data0[((x) + (y)*(width+tilewidth) + \
+			    (z)*(height+tileheight)*(width+tileheight)) * components + (c)]
+
+	for (int k = 0; k < depth + tiledepth; k++)
+	  for (int j = 0; j < height + tileheight; j++)
+	    for (int i = 0; i < width + tilewidth; i++) 
+	      for (int c = 0; c < components; c++)
+		{
+		  float x = (float)i / tilewidth;
+		  // float y = (float)j / tileheight;
+		  // float z = (tiledepth==0?0:(float)k / tiledepth);
+
+		  if(i < tilewidth) 
+		    D0(i, j, k, c) = 
+			mix(x, 
+			  D0(i, j, k, c),
+			  D0(i+width, j, k, c));
+		}
+
+	for (int k = 0; k < depth + tiledepth; k++)
+	  for (int j = 0; j < height + tileheight; j++)
+	    for (int i = 0; i < width + tilewidth; i++) 
+	      for (int c = 0; c < components; c++)
+		{
+		  // float x = (float)i / tilewidth;
+		  float y = (float)j / tileheight;
+		  // float z = (tiledepth==0?0:(float)k / tiledepth);
+
+		  if(j < tileheight) 
+		    D0(i, j, k, c) = 
+			mix(y, 
+			  D0(i, j, k, c),
+			  D0(i, j + height, k, c));
+		}
+
+	for (int k = 0; k < depth + tiledepth; k++)
+	  for (int j = 0; j < height + tileheight; j++)
+	    for (int i = 0; i < width + tilewidth; i++) 
+	      for (int c = 0; c < components; c++)
+		{
+		  // float x = (float)i / tilewidth;
+		  // float y = (float)j / tileheight;
+		  float z = (tiledepth==0?0:(float)k / tiledepth);
+
+		  if(k < tiledepth) 
+		    D0(i, j, k, c) = 
+			mix(z, 
+			  D0(i, j, k, c),
+			  D0(i, j, k + depth, c));
+		}
+
+	int ind = 0;
+	for (int k = 0; k < depth; k++)
+	  for (int j = 0; j < height; j++)
+	    for (int i = 0; i < width; i++) 
+	      for (int c = 0; c < components; c++)
+		  data[ind++] = D0(i, j, k, c) + bias;
+
+	delete[] data0;
+
+	FPARAM(quantify, 0);
+	if (quantify) {
+	  ind = 0;
+
+	  for (int i = 0; i < width * height * depth; i++) {
+	    float max = -1E30;
+	    int maxc = 0;
+	    for (int c = 0; c < components; c++) {
+	      if (data[ind + c] > max) {
+		max = data[ind + c];
+		maxc = c;
+	      }
+	      data[ind + c] = 0;
+	    }
+	    data[ind + maxc] = 1;
+	    ind += components;
+	  }
+	}
+}
+
+// vim: set syntax=c :

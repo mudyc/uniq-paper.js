@@ -1,0 +1,93 @@
+/*
+filereader.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <math.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+
+  FPARAM(scale, 1.0);
+  FPARAM(bias, 0);
+
+  FPARAM(raw, 1);
+
+  const char *file = params->getString("file", "");
+  FILE *f = fopen(file, "r");
+  if (!f) {
+    perror(file);
+    return;
+  }
+
+  int x = (int)params->getFloat("x", 0);
+  int y = (int)params->getFloat("y", 0);
+  int z = (int)params->getFloat("z", 0);
+
+  
+  int c, n0, n1, n2;
+  if(raw) {
+    c = components;
+    n0 = width;
+    n1 = height;
+    n2 = (depth==0?1:depth);
+  } else {
+      if (fscanf(f, "%d %d %d %d\n", &n2, &n1, &n0, &c) != 4) {
+	return;
+      }
+  }
+ 
+  fprintf(stderr, "Reading %dx%dx%dx%d numbers\n", n2, n1, n0, c);
+
+  if (components > 4 || components < 0) return;
+
+  int ind=0, i, j, k;
+  for (k = 0; k < n2; k++) {
+    for (j = 0; j < n1; j++) {
+      for (i = 0; i < n0; i++) {
+	float foo[100];
+	//for (int ic = 0; ic < c; ic++) {
+	//  fscanf(f, "%f", &foo[ic]);
+ 	//}
+	fread(foo, sizeof(float), c, f);
+	
+	if (i < x || i >= x + width ||
+	    j < y || j >= y + height ||
+	    k < z || k >= z + depth) continue;
+
+	if (components >= 1) data[ind++] = scale*foo[0%c]+bias;
+ 	if (components >= 2) data[ind++] = scale*foo[1%c]+bias;
+        if (components >= 3) data[ind++] = scale*foo[2%c]+bias;
+        if (components >= 4) data[ind++] = scale*foo[3%c]+bias;
+      }
+    }
+  }
+  fclose(f);
+}
+
+// vim: set syntax=c:

@@ -1,0 +1,66 @@
+/*
+ppbg1.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Libvob.
+ *    
+ *    Libvob is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Libvob is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Libvob; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+#include <math.h>
+
+float clamp(float f) {
+    if(f > 1) return 1;
+    if(f < 0) return 0;
+    return f;
+}
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    float par[3];
+
+    if(components != 4) return;
+
+    float r = params->getFloat("r", 0.1);
+    float g = params->getFloat("g", 0.1);
+    float b = params->getFloat("b", 0.1);
+
+    int ind=0, i, j;
+    float x, y;
+    float xstep = 2.0 / width;
+    float ystep = 2.0 / height;
+    for (j = 0, y = -1; j < height; j++, y += ystep) {
+      for (i = 0, x = -1; i < width; i++, x += xstep) {
+
+	float mx = 2*x; float my = 2*y;
+	par[0] = 3*(mx-my); par[1] = mx + my;
+	par[2] = 0.5;
+	double noise = 1 + 0.5 * fabs(
+		Perlin::fBm(par, 5, 2.1, 0.9));
+
+	data[ind++] = clamp(r * noise);
+	data[ind++] = clamp(g * noise);
+	data[ind++] = clamp(b * noise);
+	data[ind++] = 1;
+      }
+    }
+    
+}

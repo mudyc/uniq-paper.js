@@ -1,0 +1,67 @@
+/*
+ppbg.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+
+/** Draw a stroke from (x,y) to (x+dx), (y+dy), thick thick.
+ * The stroke may be slightly curved and should have edges of slightly
+ * different colors.
+ */
+void stroke(float x, float y, float dx, float dy, float thick,  int w, int h, int components, float *data) {
+    // ...
+}
+
+#define R(a, b) ((noiseargs[0]=(a)), (noiseargs[1]=(b)), Perlin::noise3(noiseargs))
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    int layer = (int)params->getFloat("layer", 0);
+
+    // float xstep = 1.0 / width;
+    // float ystep = 1.0 / height;
+
+    float noiseargs[3] = { 0, 0, layer };
+
+    for(int j=0; j<height; j++)
+     for(int i=0; i<width; i++)
+      for(int c = 0; c<components; c++)
+	data[(i + j * width)*components + c] = 0;
+
+    // Draw 300 strokes. This is an effect that is difficult to 
+    // do with pure implicit textures...
+    for(int str = 0; str < 300; str++) {
+	// Starting point: anywhere
+	float x = 50 * R(str, 0.5);
+	float y = 50 * R(str, 0.5);
+	// Direction and length...
+	//...
+	float dx, dy, thick;
+	stroke(x, y, dx, dy, thick, width, height, components, data);
+    }
+
+}
+
+// vim: syntax=c

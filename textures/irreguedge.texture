@@ -1,0 +1,82 @@
+/*
+irreguedge.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <math.h>
+#include <stdio.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    FPARAM(bias, 0);
+    FPARAM(scale, 1);
+    FPARAM(line_width, 2);
+    FPARAM(refsize, 256);
+    FPARAM(scaling, 0);
+
+    line_width *= pow(height / refsize, scaling);
+
+    float col[3][4] = {
+        { 1, 1, 1, 1 },
+        { 0, 0, 0, 1 },
+        { 0, 0, 0, 0 }
+    };
+
+    sscanf(params->getString("col0", "1,1,1,1"), "%f,%f,%f,%f", 
+	   &col[0][0], &col[0][1], &col[0][2], &col[0][3]);
+
+    sscanf(params->getString("col1", "0,0,0,1"), "%f,%f,%f,%f", 
+	   &col[1][0], &col[1][1], &col[1][2], &col[1][3]);
+
+    sscanf(params->getString("col2", "0,0,0,0"), "%f,%f,%f,%f", 
+	   &col[2][0], &col[2][1], &col[2][2], &col[2][3]);
+
+    int ind=0, i, j;
+    float x, y;
+    float xstep = 1.0 / width;
+    float ystep = 1.0 / height;
+
+    ind = 0;
+
+
+    for (j = 0, y = 0; j < height; j++, y += ystep) {	
+	for (i = 0, x = 0; i < width; i++, x += xstep) {
+	    int pos = 2;
+	    if (j < height/2 + line_width) pos = 1;
+	    if (j < height/2) pos = 0;
+
+	    if (components >= 1) data[ind++] = col[pos][0] * scale + bias;
+	    if (components >= 2) data[ind++] = col[pos][1] * scale + bias;
+	    if (components >= 3) data[ind++] = col[pos][2] * scale + bias;
+	    if (components >= 4) data[ind++] = col[pos][3] * scale + bias;
+	}	
+    }
+    
+
+}

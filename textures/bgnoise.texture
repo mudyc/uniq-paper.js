@@ -1,0 +1,51 @@
+/*
+bgnoise.texture
+ *    
+ *    Copyright (c) 2003, Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Tuomas J. Lukka
+ */
+
+#include <math.h>
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    float par[3];
+
+    if(components != 1) return;
+
+    int ind=0, i, j;
+    float x, y;
+    float xstep = 2.0 / width;
+    float ystep = 2.0 / height;
+    for (j = 0, y = -1; j < height; j++, y += ystep) {
+      for (i = 0, x = -1; i < width; i++, x += xstep) {
+	par[0] = 32 * x; 
+	par[1] = 96 * y;
+	par[2] = 0.5;
+	double noise = Perlin::fBm(par, 2, 2, 0.8);
+
+	data[ind++] = 0.9 - 0.2 * noise;
+      }
+    }
+    
+}

@@ -1,0 +1,231 @@
+/*
+irregu.texture
+ *    
+ *    Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka
+ *    
+ *    This file is part of Gzz.
+ *    
+ *    Gzz is free software; you can redistribute it and/or modify it under
+ *    the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *    
+ *    Gzz is distributed in the hope that it will be useful, but WITHOUT
+ *    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ *    Public License for more details.
+ *    
+ *    You should have received a copy of the GNU General
+ *    Public License along with Gzz; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *    
+ *    
+ */
+/*
+ * Written by Janne Kujala and Tuomas J. Lukka
+ */
+
+// -*-C++-*-
+#include <math.h>
+#include <stdio.h>
+
+#define FPARAM(name, default) float name = params->getFloat(#name, default);
+
+#define INVERT(i, x) ((i) + 2 * (0.5f - (i)) * (x))
+
+float filter(float *data, int w, int h, int c, float x, float y) {
+    
+    int ix0 = (int)floor(x), ix1 = ix0 + 1;
+    int iy0 = (int)floor(y), iy1 = iy0 + 1;
+
+    float fx = x - ix0;
+    float fy = y - iy0;
+
+    ix0 &= w - 1; ix1 &= w - 1;
+    iy0 &= h - 1; iy1 &= h - 1;
+    
+    return 
+	data[(ix0 + w * iy0) * c] * (1 - fx) * (1 - fy) +
+	data[(ix0 + w * iy1) * c] * (1 - fx) * fy +
+	data[(ix1 + w * iy0) * c] * fx * (1 - fy) + 
+	data[(ix1 + w * iy1) * c] * fx * fy;
+}
+
+void tr(char *s, char a, char b) {
+    while ((s = strchr(s, a)) != 0) *s = b;
+}
+
+void GENERATE(TextureParam *params, int width, int height, int depth, int components, float *data) {
+    FPARAM(bias, 0);
+    FPARAM(scale, 1);
+    FPARAM(eps, .25);
+    FPARAM(invert, 0);
+    FPARAM(quantize, 255);
+    FPARAM(angle, 0);
+    FPARAM(refsize, 256);
+    float scaling;
+    scaling = params->getStringEnum("scaling", -1, "const", "sqrt", "linear", 0) * 0.5;
+    if (scaling < 0) scaling = params->getFloat("scaling", 0);
+
+    int angles = (int)params->getFloat("angles", 0);
+    
+    // Note: radius is specified in texels
+    FPARAM(radius, 2);
+
+    radius *= pow(width / refsize, scaling);
+
+    // Ripple amplitude in texture coordinates
+    FPARAM(ripple_scale, 0.25); 
+
+    float *origdata = data;
+    data = new float[width * height * depth * 4];
+
+    if(depth != 1) return;
+    if(width != height) return;
+    
+    int ind=0, i, j;
+    float x, y;
+    float xstep = 1.0 / width;
+    float ystep = 1.0 / height;
+
+    const char *texture = params->getString("texture", "sawnoise");
+    char *texparams = strdup(params->getString("params", 
+	    "bias,0.5,scale,0.15,freq,1,df,2,scale2,0.25,freq2,10,df2,.5"));
+
+    tr(texparams, ',', ' ');
+
+    bool dbg = 0;
+
+    {
+	if(dbg) fprintf(stderr, "reading\n");
+	char s[1000];
+	sprintf(s, "../libvob/src/texture/%s.bin %d %d %d %d %s", 
+		texture,
+		width, height, depth, 4, 
+		texparams);	
+	if(0) 
+	    fprintf(stderr, "popen: %s", s);
+	
+	// XXX SECURITY
+	FILE *f = popen(s, "r");
+	if(f == 0) {
+	    perror("POPEN FAILED!!!");
+	    return;
+	}
+
+	fread(data, sizeof(float), width * height * depth * 4, f);
+	pclose(f);
+	if(dbg) fprintf(stderr, "read\n");
+    }
+
+    for (i = 0; i < width * height * depth * 4; i++) {
+	float f = INVERT(invert, data[i]);
+	if (f > 1) f = 1;
+	if (f < 0) f = 0;
+
+	float factor = (1 - radius / (width * ripple_scale));
+	if (factor < 0) factor = 0;
+
+	if (components != 2) {
+	    // Scale down to make space for the border
+	    f *= factor;
+	} else {
+	    // Scale towards middle to make space for the border
+	    f = (f - .5) * factor + .5;
+	}
+
+	data[i] = f * scale + bias;
+
+	// Add outer edge to quantized inner edge
+	if (angles)
+	    data[i] = floor(data[i] * quantize + 0.5) / quantize;
+    }
+    if(dbg) fprintf(stderr, "l1\n");
+    
+    for (int comp = 0; comp < angles && comp < components; comp++) {
+
+	float dx = cos(comp * M_PI / angles + angle * (M_PI / 180));
+	float dy = sin(comp * M_PI / angles + angle * (M_PI / 180));
+	
+	ind = 0;
+	for (j = 0, y = 0; j < height; j++, y += ystep) {	
+	    for (i = 0, x = 0; i < width; i++, x += xstep) {
+
+		float m = scale / (width * ripple_scale);
+		
+		float maxh = -1E+10;
+		for (float r = -radius; r <= radius; r += eps) {
+
+		    float startx = i + dx * r;
+		    float starty = j + dy * r;
+
+		    int ix0 = (int)floor(startx);
+		    int iy0 = (int)floor(starty);
+		    float fx = startx - ix0;
+		    float fy = starty - iy0;
+
+
+		    int ix1 = ix0 + 1;
+		    int iy1 = iy0 + 1;
+		    ix0 &= width - 1; ix1 &= width - 1;
+		    iy0 &= height - 1; iy1 &= height - 1;
+
+		    float d00 = data[3 + (ix0 + width * iy0) * 4] ;
+		    float d01 = data[3 + (ix0 + width * iy1) * 4] ;
+		    float d10 = data[3 + (ix1 + width * iy0) * 4] ;
+		    float d11 = data[3 + (ix1 + width * iy1) * 4] ;
+
+		    while(r <= radius && fx >= 0 && fx <= 1 &&
+			    fy >= 0 && fy <= 1) {
+			float val = 
+			    d00 * (1 - fx) * (1 - fy) +
+			    d01 * (1 - fx) * fy +
+			    d10 * fx * (1 - fy) + 
+			    d11 * fx * fy;
+			val += sqrt(radius * radius - r * r) * m;
+			if(val > maxh) maxh = val;
+
+			r += eps;
+			fx += eps * dx;
+			fy += eps * dy;
+		    }
+		/*
+		    float h = filter(data + 3, width, height, 4, 
+				     i + dx * r, j + dy * r);
+
+		    h += sqrt(radius * radius - r * r) * m;
+		    //h += radius * scale;
+		    if (h > maxh) maxh = h;
+		    */
+		}
+
+		origdata[ind + comp] = maxh;
+
+		ind += components;
+	    }
+	}
+
+    }
+
+#if 0
+    for(int i = 0; i<width*components; i += 4) {
+	fprintf(stderr, "%.3f %.3f %.3f %.3f\n",
+		data[i+0],
+		data[i+1],
+		data[i+2],
+		data[i+3]);
+    }
+#endif
+    if(dbg) fprintf(stderr, "l2\n");
+
+    for (int i = 0; i < width * height * depth; i++)
+	for (int c = angles; c < components; c++) 
+	    origdata[i * components + c] = data[4 * i + 3 - (c - angles)];
+
+    delete[] data;
+    if(dbg) fprintf(stderr, "done\n");
+}
+
+
+// vim: syntax=c :

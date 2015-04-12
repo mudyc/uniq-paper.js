@@ -89,6 +89,7 @@ class NamedTexture:
             outfile.write('TEX_DATA.push(\n')
             json.dump({
                 'data': done,
+                'name': self.name,
                 'width': self.args[0],
                 'height': self.args[1],
                 'depth': self.args[2],

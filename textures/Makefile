@@ -10,7 +10,7 @@ LIBS = -lglut
 FINDSRC := .
 
 all: Texture_decl.generated.hxx Texture_const.generated.cxx Perlin.o Texture.o $(TEXTURE_OBJS) $(TEXTURE_EXES) Texture_gettexture.o Texture_pipetexture.o
-	mkdir js
+	mkdir -p js
 	python textures.py
 
 # We have some extra here, since these need to be really fast

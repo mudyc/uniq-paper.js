@@ -1,15 +1,15 @@
 # 
-# Copyright (c) 2015, Matti Katila (ported from libvob code)
-#               2003, Janne Kujala and Tuomas J. Lukka
+# Copyright (c) 2015, Matti Katila
+#       Ported from the Libvob code Copyright (c) 2003, Janne Kujala and Tuomas J. Lukka 
 # 
-# This file is part of uni-paper.js.
+# This file is part of uniq-paper.js.
 # 
-# uni-paper.js is free software; you can redistribute it and/or modify it under
+# uniq-paper.js is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 # 
-# uni-paper.js is distributed in the hope that it will be useful, but WITHOUT
+# uniq-paper.js is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
 # Public License for more details.
@@ -320,9 +320,3 @@ class PMill
         seeds = (Math.random()*2000000000 for foo in passes)
 
 
-
-$(document).ready( ()->
-    console.log("asdf")
-    canvas = document.getElementById("canvas")
-    gl = canvas.getContext("experimental-webgl")
-)

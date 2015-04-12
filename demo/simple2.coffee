@@ -187,7 +187,6 @@ run_programs = (gl) ->
     program
 
 main = () ->
-    console.log("ASDFADSF")
     # Get A WebGL context
     canvas = document.getElementById("canvas")
     gl = canvas.getContext("experimental-webgl")
@@ -196,8 +195,6 @@ main = () ->
     console.log(canvas, gl)
 
     nt = new NamedTextures(gl)
-
-    console.log('got ready')
 
     program = run_programs(gl)
 

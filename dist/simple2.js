@@ -130,13 +130,11 @@ run_programs = function(gl) {
 
 main = function() {
   var attr, buffer, canvas, colors, gl, h, i, idx, len, nt, program, ref, resolutionLocation, sh, t, texCoordBuffer, texCoordLocation, w, x, y;
-  console.log("ASDFADSF");
   canvas = document.getElementById("canvas");
   gl = canvas.getContext("experimental-webgl");
   window.gl = gl;
   console.log(canvas, gl);
   nt = new NamedTextures(gl);
-  console.log('got ready');
   program = run_programs(gl);
   resolutionLocation = gl.getUniformLocation(program, "u_resolution");
   gl.uniform2f(resolutionLocation, canvas.width, canvas.height);

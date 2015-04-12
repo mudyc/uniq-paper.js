@@ -61,6 +61,6 @@ clean:
 	find $(FINDSRC) -name "*.bin" |xargs rm -f
 	find $(FINDSRC) -name "*.generated.*"|xargs rm -f
 	find $(FINDSRC) -name "*.o" |xargs rm -f
-	find $(FINDSRC) -name "*.js" |xargs rm -f
+	#find $(FINDSRC) -name "*.js" |xargs rm -f
 	find $(FINDSRC) -name "*.json" |xargs rm -f
 	rm -f $(GENSRC)

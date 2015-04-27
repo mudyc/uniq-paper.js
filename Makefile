@@ -5,6 +5,7 @@ all:
 	mkdir -p dist
 
 	coffee -cb -o dist/ src/
+	coffee -cb -o dist/ demo/
 
   # coffee to js
 	cat \

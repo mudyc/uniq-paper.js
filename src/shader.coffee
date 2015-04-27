@@ -45,6 +45,11 @@ class Shader
             "uniform vec2 u_resolution;\n" +
             "varying vec2 tc0;\n" +
             "varying vec2 tc1;\n" +
+            "uniform vec4 u_skew0[2];\n" +
+            "uniform vec4 u_skew1[2];\n" +
+            "vec2 doot(vec4 skew[2], vec4 coords){\n" +
+            "    return vec2(skew[0].x*coords.x + skew[0].y*coords.y + skew[0].z*coords.z + skew[0].w*coords.w,skew[1].x*coords.x + skew[1].y*coords.y + skew[1].z*coords.z + skew[1].w*coords.w );\n" +
+            "}\n" +
             "void main() {\n" +
             "  // convert the rectangle from pixels to 0.0 to 1.0\n" +
             "  vec2 zeroToOne = a_position / u_resolution;\n" +
@@ -53,8 +58,8 @@ class Shader
             "  // convert from 0->2 to -1->+1 (clipspace)\n" +
             "  vec2 clipSpace = zeroToTwo - 1.0;\n" +
             "  gl_Position = vec4(clipSpace, 0, 1);\n" +
-            "  tc0 = a_texCoord0;\n" +
-            "  tc1 = a_texCoord1;\n" +
+            "  tc0 = doot(u_skew0, vec4(a_texCoord0.xy,0,1));\n" +
+            "  tc1 = doot(u_skew1, vec4(a_texCoord1.xy,0,1));\n" +
             "}\n",
             # Fragment shader
             "precision highp float;\n" +
@@ -65,6 +70,7 @@ class Shader
             "uniform vec3 color2;\n" +
             "uniform vec3 r0;\n" +
             "uniform vec3 r1;\n" +
+            "uniform float trans;\n" +
             "varying vec2 tc0;\n" +
             "varying vec2 tc1;\n" +
             "void main(){\n" +
@@ -73,7 +79,10 @@ class Shader
             "    float spare0 = dot(t0, t1);\n" +
             "    float spare1 = spare0 * spare0;\n" +
             "    float ef = spare1 * dot(t0, r0);\n" +
-            "    gl_FragColor = vec4(mix(color0, color1, ef).rgb,1);\n" +
+            "    vec3 color = mix(color0, color1, ef);\n" +
+            "    gl_FragColor = vec4(color.rgb, 1);\n" +
+            "    if (trans > 0.0)\n" +
+            "        gl_FragColor = vec4(color.rgb, color.b-trans);\n" +
             "}\n"
         )
 
@@ -87,6 +96,11 @@ class Shader
             "uniform vec2 u_resolution;\n" +
             "varying vec2 tc0;\n" +
             "varying vec2 tc1;\n" +
+            "uniform vec4 u_skew0[2];\n" +
+            "uniform vec4 u_skew1[2];\n" +
+            "vec2 doot(vec4 skew[2], vec4 coords){\n" +
+            "    return vec2(skew[0].x*coords.x + skew[0].y*coords.y + skew[0].z*coords.z + skew[0].w*coords.w,skew[1].x*coords.x + skew[1].y*coords.y + skew[1].z*coords.z + skew[1].w*coords.w );\n" +
+            "}\n" +
             "void main() {\n" +
             "  // convert the rectangle from pixels to 0.0 to 1.0\n" +
             "  vec2 zeroToOne = a_position / u_resolution;\n" +
@@ -95,8 +109,8 @@ class Shader
             "  // convert from 0->2 to -1->+1 (clipspace)\n" +
             "  vec2 clipSpace = zeroToTwo - 1.0;\n" +
             "  gl_Position = vec4(clipSpace, 0, 1);\n" +
-            "  tc0 = a_texCoord0;\n" +
-            "  tc1 = a_texCoord1;\n" +
+            "  tc0 = doot(u_skew0, vec4(a_texCoord0.xy,0,1));\n" +
+            "  tc1 = doot(u_skew1, vec4(a_texCoord1.xy,0,1));\n" +
             "}\n",
             # Fragment shader
             # Fraction-line color interpolate
@@ -114,6 +128,7 @@ class Shader
             "uniform vec3 color0;\n" +
             "uniform vec3 color1;\n" +
             "uniform vec3 color2;\n" +
+            "uniform float trans;\n" +
             "uniform vec3 r0;\n" +
             "uniform vec3 r1;\n" +
             "void main(){\n" +
@@ -123,7 +138,10 @@ class Shader
             "    float spare1 = dot(t1, r1);\n" +
             "    vec3 tmp = mix(color0, color1, spare0);\n" +
             "    vec4 color = vec4(mix(tmp, color2, spare1).rgb, 1);\n" +
-            "    color.a = abs(spare0*spare0 - spare1*spare1);\n" +
+            "    color.a = 1.0;\n" +
+            "    if (trans > 0.0)\n" +
+            "        color.a = abs(spare0*spare0 - spare1*spare1);\n" +
+
             "    gl_FragColor = color;\n" +
             #"    gl_FragColor = vec4(spare1, spare1, spare1, 1);\n" +
             "}\n"
@@ -148,6 +166,11 @@ class Shader
             "uniform vec2 u_resolution;\n" +
             "varying vec2 tc0;\n" +
             "varying vec2 tc1;\n" +
+            "uniform vec4 u_skew0[2];\n" +
+            "uniform vec4 u_skew1[2];\n" +
+            "vec2 doot(vec4 skew[2], vec4 coords){\n" +
+            "    return vec2(skew[0].x*coords.x + skew[0].y*coords.y + skew[0].z*coords.z + skew[0].w*coords.w,skew[1].x*coords.x + skew[1].y*coords.y + skew[1].z*coords.z + skew[1].w*coords.w );\n" +
+            "}\n" +
             "void main() {\n" +
             "  // convert the rectangle from pixels to 0.0 to 1.0\n" +
             "  vec2 zeroToOne = a_position / u_resolution;\n" +
@@ -156,8 +179,8 @@ class Shader
             "  // convert from 0->2 to -1->+1 (clipspace)\n" +
             "  vec2 clipSpace = zeroToTwo - 1.0;\n" +
             "  gl_Position = vec4(clipSpace, 0, 1);\n" +
-            "  tc0 = a_texCoord0;\n" +
-            "  tc1 = a_texCoord1;\n" +
+            "  tc0 = doot(u_skew0, vec4(a_texCoord0.xy,0,1));\n" +
+            "  tc1 = doot(u_skew1, vec4(a_texCoord1.xy,0,1));\n" +
             "}\n",
             # Fragment shader
             # Fraction-line color interpolate
@@ -175,6 +198,7 @@ class Shader
             "uniform vec3 color0;\n" +
             "uniform vec3 color1;\n" +
             "uniform vec3 color2;\n" +
+            "uniform float trans;\n" +
             "uniform vec3 r0;\n" +
             "uniform vec3 r1;\n" +
             "void main(){\n" +
@@ -184,7 +208,8 @@ class Shader
             "    float spare1 = -spare0;\n" +
             "    vec3 tmp = mix(color0, color1, spare1);\n" +
             "    vec4 color = vec4(mix(tmp, color2, spare1).rgb, 1);\n" +
-            "    color.a = t0.b * r0.b + t1.b * r1.b;\n" +
+            "    if (trans > 0.0)\n" +
+            "        color.a = t0.b * r0.b + t1.b * r1.b;\n" +
             "    gl_FragColor = color;\n" +
             "}\n"
         )
@@ -242,6 +267,13 @@ class Shader
         gl.uniform1i(tex0, 0)
         gl.uniform1i(tex1, 1)
 
+        # set coords
+        s0 = gl.getUniformLocation(program, "u_skew0")
+        gl.uniform4fv(s0, obj.coords0)
+        s1 = gl.getUniformLocation(program, "u_skew1")
+        gl.uniform4fv(s1, obj.coords1)
+
+
         # set colors
         color0 = gl.getUniformLocation(program, "color0")
         gl.uniform3f(color0, obj.c0[0], obj.c0[1], obj.c0[2])
@@ -255,6 +287,10 @@ class Shader
         gl.uniform3f(r0, obj.r0[0], obj.r0[1], obj.r0[2])
         r1 = gl.getUniformLocation(program, "r1")
         gl.uniform3f(r1, obj.r1[0], obj.r1[1], obj.r1[2])
+
+        # set transparency
+        t = gl.getUniformLocation(program, "trans")
+        gl.uniform1f(t, obj.trans);
 
         buffer = gl.createBuffer()
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer)

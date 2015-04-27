@@ -47,31 +47,40 @@ main = () ->
     idx = 0
     for t in [0..10]
         colors = new Colors(gl, Math.random())
-        sh.setup(gl, 0, {
-            tex0: nt.get_random_tex(),
-            tex1: nt.get_random_tex(),
-            u_resolution: {
-              width: canvas.width,
-              height: canvas.height,
-            },
-            c0: colors.get_color(0),
-            c1: colors.get_color(1),
-            c2: colors.get_color(2),
-            r0: colors.get_rand(0),
-            r1: colors.get_rand(1),
-        })
-        setRectangle(gl, x,y,w,h)
+        for trans in [0, 0.5, 0.95]
+            rootrep0 = new TexGenXYRepeatUnit().getRelated().texCoords2D()
+            rootrep1 = new TexGenXYRepeatUnit().getRelated().texCoords2D()
+
+            sh.setup(gl, Math.floor(Math.random()*3), {
+                tex0: nt.get_random_tex(),
+                tex1: nt.get_random_tex(),
+                coords0: rootrep0,
+                coords1: rootrep1,
+                u_resolution: {
+                  width: canvas.width,
+                  height: canvas.height,
+                },
+                c0: colors.get_color(0),
+                c1: colors.get_color(1),
+                c2: colors.get_color(2),
+                r0: colors.get_rand(0),
+                r1: colors.get_rand(1),
+                trans: trans,
+            })
+            setRectangle(gl, x,y,w,h)
+
+            gl.enable(gl.BLEND)
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+            gl.blendEquation(gl.FUNC_ADD)
+            gl.disable(gl.DEPTH_TEST)
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6)
+
         x += w
         idx += 1
         if idx % 5 == 0
            y += h
            x = 0
-
-        gl.enable(gl.BLEND)
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        gl.disable(gl.DEPTH_TEST)
-
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
 
 
 window.onload = main

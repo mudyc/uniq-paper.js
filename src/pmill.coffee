@@ -207,7 +207,7 @@ class Colors
             angles = [ 0, 30, 60, 120, 180, 240, 300, 360 ]
             n = angles.length - 1
             f *= n / 360.0
-            index = Math.round(f) % n
+            index = Math.abs(Math.round(f) % n)
             fract = f - Math.round(f)
             return (1 - fract) * angles[index] + fract * angles[index + 1]
 
@@ -261,17 +261,31 @@ class Colors
     get_rand: (idx)-> this.randvecs[idx]
 
 
+smallIntegerG0 = ()->
+    #"""Return a small integer greater than 0.
+    #"""
+    return Math.abs(int(0.5*nextGaussian()))+1
+
+smallInteger = ()->
+    #"""Return a small integer.
+    #"""
+    return Math.abs(int(1.5*nextGaussian()))
+
+
+
 class TexGenXYRepeatUnit
-    constructor: ()->
-        vecs = null
+    constructor: (vecs)->
+        #vecs = null
         scale = .3
         scale_log_stddev = 0.4
         angle_stddev = .065
         lendiff_mean = 0
         lendiff_stddev = .1
 
-        if vecs != null
-            this.vecs = vecs
+        scale = 2 * 1.5
+
+        if vecs != undefined
+            @vecs = vecs
             return
 
         # The angle between the basis vectors
@@ -294,9 +308,93 @@ class TexGenXYRepeatUnit
         rt = scale * Math.exp(m0 - m)
 
         # The vectors that give x and y when dotted with (s, t, 0, 1)
-        this.vecs = [[ rs * Math.cos(as), rt * Math.cos(at)],
+        @vecs = [[ rs * Math.cos(as), rt * Math.cos(at)],
                      [ rs * Math.sin(as), rt * Math.sin(at)]]
 
+    _getSTVectors: () ->
+        """Get the 2 4-component vectors that (x,y,0,1) should
+        be multiplied by to get (s,t).
+        """
+        mat = @vecs
+        # 1 / determinant
+        f = 1.0 / (mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0])
+
+        # Start return value
+        r = [[ f * mat[1][1], -f * mat[0][1], 0, "?"],
+             [ -f * mat[1][0], f * mat[0][0], 0, "?"]]
+
+        # Random offsets
+        r[0][3] = Math.random()
+        r[1][3] = Math.random()
+
+        return r
+
+    texCoords2D: ()->
+        """Get an appropriate texgen vector to use for 2D texture coordinates.
+        The randomness is used only for the shift inside the (s,t) coordinate
+        system.
+        """
+        stv = @._getSTVectors()
+        return [
+            stv[0][0],
+            stv[0][1],
+            stv[0][2],
+            stv[0][3],
+            stv[1][0],
+            stv[1][1],
+            stv[1][2],
+            stv[1][3],
+ #           0, 0, 0, 0
+ #           0, 0, 0, 1
+        ]
+
+    getRelated: ()->
+        #"""Create another TexGenXYRepeatUnit so that that unit
+        #also repeats with this unit but may repeat more often
+        #or be skewed.
+
+        #The equation between the vectors is:
+        #a vn1 + b vn2 = vo1
+        #c vn1 + d vn2 = vo2
+        #Where a,b,c,d are integers.
+        #"""
+
+        chooseInts=()->
+            while 1
+                abcd = (Math.round(2*nextGaussian()**3) for i in [0...4])
+                a = abcd[0]; b = abcd[1]; c = abcd[2]; d = abcd[3]
+                l1 = Math.sqrt(a*a + b*b)
+                l2 = Math.sqrt(c*c + d*d)
+                det = a*d-b*c
+                if det == 0
+                    continue
+                if l1 * l2 / det > 2
+                    continue
+                if Math.abs(Math.log(l1 / l2)) > .7
+                    continue
+                break
+            return [a,b,c,d]
+
+        abcd = chooseInts()
+        a = abcd[0]; b = abcd[1]; c = abcd[2]; d = abcd[3]
+        # 1 / determinant
+        f = 1.0 / (a * d - b * c)
+
+        vecs = [ [ f * d * @vecs[0][0] - f * b * @vecs[0][1], -f * c * @vecs[0][0] + f * a * @vecs[0][1] ],
+                 [ f * d * @vecs[1][0] - f * b * @vecs[1][1], -f * c * @vecs[1][0] + f * a * @vecs[1][1] ] ]
+
+        # Note that the 'vecs' matrix stores the parallelogram side vectors as its columns
+        # The debug prints below show that 'vecs' correctly solves the equation
+        if 0
+            print "S: ", [@vecs[0][0], @vecs[1][0]]
+            print "T: ", [@vecs[0][1], @vecs[1][1]]
+            print "S': ", [vecs[0][0], vecs[1][0]]
+            print "T': ", [vecs[0][1], vecs[1][1]]
+            print "a S' + b T':", [a*vecs[0][0]+b*vecs[0][1], a*vecs[1][0]+b*vecs[1][1]]
+            print "c S' + d T':", [c*vecs[0][0]+d*vecs[0][1], c*vecs[1][0]+d*vecs[1][1]]
+            print "a,b,c,d:", a,b,c,d
+
+        return new TexGenXYRepeatUnit(vecs)
 
 
 class PMill

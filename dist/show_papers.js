@@ -11,7 +11,7 @@ setRectangle = function(gl, x, y, width, height) {
 };
 
 main = function() {
-  var canvas, colors, gl, h, i, idx, nt, results, sh, t, w, x, y;
+  var canvas, colors, gl, h, i, idx, j, len, nt, ref, results, rootrep0, rootrep1, sh, t, trans, w, x, y;
   canvas = document.getElementById("canvas");
   gl = canvas.getContext("experimental-webgl");
   nt = new NamedTextures(gl);
@@ -22,30 +22,42 @@ main = function() {
   results = [];
   for (t = i = 0; i <= 10; t = ++i) {
     colors = new Colors(gl, Math.random());
-    sh.setup(gl, 0, {
-      tex0: nt.get_random_tex(),
-      tex1: nt.get_random_tex(),
-      u_resolution: {
-        width: canvas.width,
-        height: canvas.height
-      },
-      c0: colors.get_color(0),
-      c1: colors.get_color(1),
-      c2: colors.get_color(2),
-      r0: colors.get_rand(0),
-      r1: colors.get_rand(1)
-    });
-    setRectangle(gl, x, y, w, h);
+    ref = [0, 0.5, 0.95];
+    for (j = 0, len = ref.length; j < len; j++) {
+      trans = ref[j];
+      rootrep0 = new TexGenXYRepeatUnit().getRelated().texCoords2D();
+      rootrep1 = new TexGenXYRepeatUnit().getRelated().texCoords2D();
+      sh.setup(gl, Math.floor(Math.random() * 3), {
+        tex0: nt.get_random_tex(),
+        tex1: nt.get_random_tex(),
+        coords0: rootrep0,
+        coords1: rootrep1,
+        u_resolution: {
+          width: canvas.width,
+          height: canvas.height
+        },
+        c0: colors.get_color(0),
+        c1: colors.get_color(1),
+        c2: colors.get_color(2),
+        r0: colors.get_rand(0),
+        r1: colors.get_rand(1),
+        trans: trans
+      });
+      setRectangle(gl, x, y, w, h);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.disable(gl.DEPTH_TEST);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
     x += w;
     idx += 1;
     if (idx % 5 === 0) {
       y += h;
-      x = 0;
+      results.push(x = 0);
+    } else {
+      results.push(void 0);
     }
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.disable(gl.DEPTH_TEST);
-    results.push(gl.drawArrays(gl.TRIANGLES, 0, 6));
   }
   return results;
 };
